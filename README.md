@@ -4,3 +4,6 @@ This sample shows two ways of tracking the user via the Geolocator class:
 * With the GeoLocator StatusChanged event (prefered method)
 
 The sample implements the MVVM pattern, implemented via Galasoft MVVM Light.
+
+
+![Sample screenshot](http://i.imgur.com/wCz7j8j.png "Sample screenshot")
