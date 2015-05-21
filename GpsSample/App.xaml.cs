@@ -7,6 +7,7 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Media.Animation;
 using Windows.UI.Xaml.Navigation;
 using GpsSample.View;
+using GalaSoft.MvvmLight.Threading;
 
 // The Blank Application template is documented at http://go.microsoft.com/fwlink/?LinkId=391641
 
@@ -88,7 +89,7 @@ namespace GpsSample
                     throw new Exception("Failed to create initial page");
                 }
             }
-
+            DispatcherHelper.Initialize();
             // Ensure the current window is active
             Window.Current.Activate();
         }

@@ -7,39 +7,20 @@ using Windows.Devices.Geolocation;
 using Windows.UI.Xaml;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
+using System.Diagnostics;
 
 namespace GpsSample.ViewModel
 {
     public class MainVM : ViewModelBase
     {
-        #region ctor(s)
-
-        public MainVM()
-        {
-            this.Methods = new List<string> {"none (stop tracking)", "gps event", "timer"};
-            this._geoLocator = new Geolocator {MovementThreshold = 15, DesiredAccuracy = PositionAccuracy.Default};
-            this._timer = new DispatcherTimer {Interval = new TimeSpan(0, 0, 2)};
-            this._task = new TaskFactory(TaskScheduler.FromCurrentSynchronizationContext());
-            this.Log = new ObservableCollection<string>();
-        }
-
-        #endregion
-
-        #region logging
-
-        private void LogAnUpdate(string lat, string lon)
-        {
-            Log.Add(DateTime.Now.ToString("HH:mm:ss") + ": " + lat + ", " + lon);
-        }
-
-        #endregion
-
         #region fields & props
 
         private readonly Geolocator _geoLocator;
         private readonly DispatcherTimer _timer;
         private readonly TaskFactory _task;
 
+        private string _oldLongitude;
+        private string _oldLatitude;
 
         private string _longitude;
 
@@ -84,6 +65,19 @@ namespace GpsSample.ViewModel
 
         #endregion
 
+        #region ctor(s)
+
+        public MainVM()
+        {
+            this.Methods = new List<string> {"none (stop tracking)", "gps event", "timer"};
+            this._geoLocator = new Geolocator {ReportInterval = 2000, DesiredAccuracy = PositionAccuracy.Default};
+            this._timer = new DispatcherTimer {Interval = new TimeSpan(0, 0, 2)};
+            this._task = new TaskFactory(TaskScheduler.FromCurrentSynchronizationContext());
+            this.Log = new ObservableCollection<string>();
+        }
+
+        #endregion
+
         #region commands
 
         public ICommand MethodChangedCommand
@@ -122,6 +116,16 @@ namespace GpsSample.ViewModel
 
         #endregion
 
+        #region logging
+
+        private void LogAnUpdate(string lat, string lon)
+        {
+            Log.Add(DateTime.Now.ToString("HH:mm:ss") + ": " + lat + ", " + lon);
+            Debug.WriteLine(lat + " : " + lon);
+        }
+
+        #endregion
+
         #region geolocator logic
 
         public void StartContinuousTrackingGeo()
@@ -134,9 +138,9 @@ namespace GpsSample.ViewModel
             _geoLocator.PositionChanged -= GeoLocatorPositionChanged;
         }
 
-        private async void GeoLocatorPositionChanged(Geolocator sender, PositionChangedEventArgs args)
+        private void GeoLocatorPositionChanged(Geolocator sender, PositionChangedEventArgs args)
         {
-            await _task.StartNew(() =>
+            GalaSoft.MvvmLight.Threading.DispatcherHelper.CheckBeginInvokeOnUI(() =>
             {
                 Latitude = "Latitude: " + args.Position.Coordinate.Latitude;
                 Longitude = "Longitude: " + args.Position.Coordinate.Longitude;
@@ -162,6 +166,10 @@ namespace GpsSample.ViewModel
 
         private async void UpdatePosition(object sender, object e)
         {
+            //Since this is an async task we won't know how long getting the location will take
+            //we stop the timer so no new ticks are called when the previous tick wasn't finished
+            _timer.Stop();
+
             var location = await _geoLocator.GetGeopositionAsync();
 
             if (location != null)
@@ -170,6 +178,9 @@ namespace GpsSample.ViewModel
                 Longitude = "Longitude: " + location.Coordinate.Longitude;
                 LogAnUpdate(Latitude, Longitude);
             }
+
+            //Start the timer when the job is finished
+            _timer.Start();
         }
 
         #endregion
